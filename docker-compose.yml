@@ -1,0 +1,75 @@
+version: '3'
+services:
+
+  #PHP Service
+  app:
+    build: .docker/php
+    container_name: app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+#      XDEBUG_CONFIG: "remote_host=172.17.0.1 remote_enable=1"
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./app-plataforma:/var/www
+      - .docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  #Nginx Service
+  webserver-app:
+    image: nginx:alpine
+    container_name: webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./app-plataforma:/var/www
+      - .docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - app-network
+
+  #MySQL Service
+  db-app:
+    image: mysql:5.7.22
+    container_name: db-app
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "33006:3306"
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_ROOT_PASSWORD: 123456
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network
+    
+  redis:
+    image: redis:alpine
+    container_name: redis
+    command: redis-server
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis:/data
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local
